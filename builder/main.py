@@ -17,39 +17,14 @@ from os.path import join, isdir
 from SCons.Script import AlwaysBuild, Builder, Default, DefaultEnvironment
 import platform as sys_pf
 
+dist_sys = sys_pf.system().lower()
+if dist_sys == "darwin":
+    dist_sys = "macosx"
+
 env = DefaultEnvironment()
 platform = env.PioPlatform()
-
-upload_protocol = env.subst("$UPLOAD_PROTOCOL")
 FRAMEWORK_DIR = platform.get_package_dir("framework-arduinoapollo3")
 assert isdir(FRAMEWORK_DIR)
-
-if upload_protocol.startswith("svl"):
-    upload_program = join(FRAMEWORK_DIR, "tools", "artemis", sys_pf.system().lower(), "artemis_svl")
-    if sys_pf.system() == "Windows":
-        upload_program += ".exe"
-
-    elif sys_pf.system().lower() in ["darwin"]:
-        upload_program = join(FRAMEWORK_DIR, "tools", "artemis", "macosx", "artemis_svl")
-
-upload_speed = env.subst("$UPLOAD_SPEED")
-if len(upload_speed) == 0:
-    upload_speed = "921600"
-
-upload_port = env.subst("$UPLOAD_PORT")
-if len(upload_port) == 0:
-    env.AutodetectUploadPort()
-    
-    # env.Replace(
-    #     UPLOADER=upload_program,
-    #     UPLOADERFLAGS=[
-    #         "$UPLOAD_PORT",
-    #         "-b", "921600",
-    #         "-f", "$SOURCES",
-    #         "-v",
-    #     ],
-    #     UPLOADCMD="$UPLOADER $UPLOADERFLAGS"
-    # )
 
 # A full list with the available variables
 # http://www.scons.org/doc/production/HTML/scons-user.html#app-variables
@@ -64,15 +39,6 @@ env.Replace(
     SIZETOOL="arm-none-eabi-size",
 
     ARFLAGS=["rc"],
-
-    UPLOADER=upload_program,
-    UPLOADERFLAGS=[
-        "$UPLOAD_PORT",
-        "-b", upload_speed,
-        "-f", "$SOURCES",
-        "-v",
-    ],
-    UPLOADCMD="$UPLOADER $UPLOADERFLAGS"
 )
 
 env.Append(
@@ -109,7 +75,46 @@ target_bin = env.ElfToBin(join("$BUILD_DIR", "firmware"), target_elf)
 #
 # Target: Upload firmware
 #
-upload = env.Alias(["upload"], target_bin, "$UPLOADCMD")
+upload_protocol = env.subst("$UPLOAD_PROTOCOL")
+
+if upload_protocol.startswith('asb'):
+    upload_program = join(FRAMEWORD_DIR, "tools", "uploaders", "asb", "dist", dist_sys, "asb")
+    if dist_sys == "windows":
+        upload_program += ".exe"
+    env.Replace(
+        UPLOADER=upload_program,
+        UPLOADERFLAGS=["--bin", "$SOURCE",
+                       "--load-address-blob", "0x20000",
+                       "--magic-num", "0xCB",
+                       "-o", "$TMPFILEDIR",
+                       "--version", "0x0",
+                       "--load-address-wired", "0xC000",
+                       "-i", "6",
+                       "--options", "0x1",
+                       "-b", "115200",
+                       "-port", "$UPLOAD_PORT",
+                       "-r", "2"i,
+                       "-v"],
+        UPLOADCMD="$UPLOADER $UPLOADERFLAGS"
+    )
+
+elif upload_protocol.startswith('svl'):
+    upload_program = join(FRAMEWORD_DIR, "tools", "uploaders", "svl", "dist", dist_sys, "svl")
+    if dist_sys == "windows":
+        upload_program += ".exe"
+    env.Replace(
+        UPLOADER=upload_program,
+        UPLOADERFLAGS=["$UPLOAD_PORT",
+                       "-f", "$SOURCE",
+                       "-b", "921600",
+                       "-v"],
+        UPLOADCMD="$UPLOADER $UPLOADERFLAGS"
+    )
+
+upload_actions = [env.VerboseAction(env.AutodetectUploadPort, "Finding Upload Port..."),
+                  env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE")]
+
+upload = env.Alias(["upload"], target_bin, upload_actions)
 AlwaysBuild(upload)
 
 #

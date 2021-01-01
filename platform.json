@@ -12,15 +12,15 @@
     "type": "git",
     "url": "https://github.com/nigelb/platform-apollo3blue.git"
   },
-  "version": "0.0.1",
+  "version": "0.0.2",
   "packageRepositories": [
-    "https://dl.bintray.com/platformio/dl-packages/manifest.json",
     "http://dl.platformio.org/packages/manifest.json",
     {
       "framework-arduinoapollo3": [
         {
-          "url": "https://github.com/sparkfun/Arduino_Apollo3/archive/v1.0.22_ble-beta.tar.gz",
-          "version": "1.0.22"
+          "url": "https://github.com/sparkfun/Arduino_Apollo3/releases/download/v2.0.3/Arduino_Apollo3.tar.gz",
+	  "sha256": "B6730F1F522209B29C9A4D5DBCEE0B9E65F39F573969B2E525BD306BFAB40B1A",
+          "version": "2.0.3"
         }
       ]
     }
@@ -34,12 +34,11 @@
   "packages": {
     "toolchain-gccarmnoneeabi": {
       "type": "toolchain",
-      "version": ">=1.7"
+      "version": ">=1.8"
     },
     "framework-arduinoapollo3": {
       "type": "framework",
-      "optional": true,
-      "version": "~1.0.20"
+      "version": ">2.0.0"
     }
   }
 }
